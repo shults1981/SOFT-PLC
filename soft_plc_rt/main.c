@@ -26,16 +26,16 @@
 */
 
 
-#define windows
+#define _linux_
 
-#ifdef windows
+#ifdef _windows_
 
     #define test_prog  "E:\\SOFT_PLC\\soft_plc_rt\\test_prg.splcobj"
 
 #endif
 
-#ifdef linux
-    #define test_prog  "//test_prg.splcobj"
+#ifdef _linux_
+    #define test_prog  "//home//alex//programing//SOFT_PLC//soft_plc_rt//test_prg.splcobj"
 #endif
 
 
@@ -50,7 +50,7 @@
 typedef unsigned char BYTE;
 
 //=====================Point Instriction Registers
-int PI_R;
+static int PI_R;
 
 
 
@@ -238,7 +238,7 @@ void _add()
 }
 //-----------------------------------
 
-int  DECODE_OP_CODE_(BYTE op_code[2],int* _operand_size, void (*_pu_insturction) () )
+int  DECODE_OP_CODE_(BYTE op_code[2],int* _operand_size, void (*_pu_insturction) (void) )
 {
     if ((op_code[0]==0x7b) && (op_code[1]==0x7b)){
         *_operand_size=0;
@@ -276,7 +276,7 @@ int main(int argc, char* argv[])
     int operand_size=0;
     int end_of_circle=1;
 
-    void (*PUI)()=&_nop;
+    void (*PUI)(void)=&_nop;
 
     //-------initialize PLC
     FLAG_R=0x00;
