@@ -16,7 +16,7 @@
 |****************************************************************************
 |****************************************************************************
 * Project                                         :<Soft_PLC>
-* Programm name                                   :softPLC_kernel.c
+* Programm name                                   :softPLC_rt.c
 * Author                                          :Shults1981
 * Data create                                     :01/06/2019
 * Purpose                                         :
@@ -26,7 +26,7 @@
 */
 
 
-#define _linux_
+#define _windows_
 
 #ifdef _windows_
 
@@ -263,6 +263,8 @@ int  DECODE_OP_CODE_(BYTE op_code[2],int* _operand_size, void (*_pu_insturction)
 
 
 
+
+
 int main(int argc, char* argv[])
 
 {
@@ -316,7 +318,7 @@ int main(int argc, char* argv[])
     //    execute POU
     count_of_tic=2;
 
-    while(count_of_tic)
+    while(count_of_tic) // main execute circle
     {
         addr=0;
         PI_R=addr;
@@ -325,6 +327,7 @@ int main(int argc, char* argv[])
 
         while (end_of_circle)
         {
+            //--- get OP CODE
             cur_op_code[0]=EXEC_PRG[PI_R];
             PI_R++;
             cur_op_code[1]=EXEC_PRG[PI_R];
@@ -333,19 +336,22 @@ int main(int argc, char* argv[])
             printf("cmd-%x%x;operand_size-%d;",cur_op_code[0],cur_op_code[1], operand_size);
 
 
-
-            //  operand
+            //---- GET OPERAND
             if (operand_size>0){
                 for (i=1;i<=operand_size;++i)
                 {
                     PI_R+=i;
                     operand=EXEC_PRG[PI_R];
-                    printf("operand-%x",operand);
+                    printf("operand-%x",operand);// debug msg
                 }
             }
             else
-                printf("no operand");
-            printf("\n");
+                printf("no operand"); // debug msg
+            printf("\n");// debug msg
+
+            //--- execute operation
+
+
 
             PI_R++;
         }

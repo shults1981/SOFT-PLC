@@ -1,0 +1,10 @@
+SPLC_PRG
+Program:TEST
+DATA.
+    BOOL:BV1
+    INT:IV1
+TEXT.
+l1: L IV1
+    INC
+    T IV2
+END_OF_PROGRAM:TEST
