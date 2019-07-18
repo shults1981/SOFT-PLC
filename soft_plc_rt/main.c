@@ -26,7 +26,7 @@
 */
 
 
-#define _windows_
+#define _linux_
 
 #ifdef _windows_
 
@@ -217,48 +217,71 @@ int read_programm_image (char* img_file_name)
 
 }
 //-------------------------------
-void _load()
-{
+static void (*PUI)(int,BYTE);
 
+
+static void _load(int _operand_size, BYTE _operand)
+{
+    printf(" LOAD \n");
+
+    //basic actions
+
+    ACC1_i=_operand;
+    printf(" LOAD \n");
+
+    //flag
 
 }
-void _transmit()
+static void _transmit(int _operand_size, BYTE _operand)
 {
 
 }
 
-void _nop()
+static void _nop(int _operand_size, BYTE _operand)
 {
+    printf(" NOP \n");
 
 }
 
-void _add()
+static void _add(int _operand_size,BYTE _operand)
 {
 
 }
 //-----------------------------------
 
-int  DECODE_OP_CODE_(BYTE op_code[2],int* _operand_size, void (*_pu_insturction) (void) )
+int  DECODE_OP_CODE_(BYTE op_code[2],int* _operand_size, void (*_pu_insturction) (int,BYTE) )
 {
     if ((op_code[0]==0x7b) && (op_code[1]==0x7b)){
         *_operand_size=0;
-        _pu_insturction=&_nop;
+        _pu_insturction=_nop;
         return 1;
     }
 
     if ((op_code[0]==0x7d) && (op_code[1]==0x7d)){
         *_operand_size=0;
-        _pu_insturction=&_nop;
+        _pu_insturction=_nop;
         return 0;
     }
 
     if ((op_code[0]==0x30) && (op_code[1]==0x30)){
         *_operand_size=1;
-        _pu_insturction=&_load;
+        _pu_insturction=_load;
         return 1;
     }
 
     return -1;
+}
+
+
+void _DEBUG_OUT(void)
+{
+//    printf("++++++++++++++++++++++++++++++++++++++++++\n");
+    printf("ACC_=%d     FLAG=",ACC1_i);
+    for (int i=0;i<16;i++)
+        FLAG_R&(1<<i)?printf("%d",1):printf("%d",0);
+    printf("\n");
+
+
 }
 
 
@@ -278,7 +301,7 @@ int main(int argc, char* argv[])
     int operand_size=0;
     int end_of_circle=1;
 
-    void (*PUI)(void)=&_nop;
+
 
     //-------initialize PLC
     FLAG_R=0x00;
@@ -292,6 +315,8 @@ int main(int argc, char* argv[])
 
     for (i=0;i<SIZE_OF_MERKER_REGION;i++)
         MERKER[i]=0x00;
+
+    PUI=_nop;
 
     //-----------------------
 
@@ -312,21 +337,24 @@ int main(int argc, char* argv[])
             addr++;
        }
 
-
+    printf("\n__________________________________________\n");
 
 
     //    execute POU
-    count_of_tic=2;
+    count_of_tic=1;
 
     while(count_of_tic) // main execute circle
     {
         addr=0;
         PI_R=addr;
         end_of_circle=1;
-        printf("tic #%d\n",count_of_tic);
+        printf("                      tic #%d\n",count_of_tic);
 
         while (end_of_circle)
         {
+
+            _DEBUG_OUT();
+
             //--- get OP CODE
             cur_op_code[0]=EXEC_PRG[PI_R];
             PI_R++;
@@ -351,7 +379,8 @@ int main(int argc, char* argv[])
 
             //--- execute operation
 
-
+            PUI(operand_size,operand);
+            _DEBUG_OUT();
 
             PI_R++;
         }
