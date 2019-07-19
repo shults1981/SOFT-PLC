@@ -9,4 +9,5 @@ DISTFILES += \
     test_prg.splcobj
 
 HEADERS += \
-    op_code.h
+    op_code.h \
+    operations.h

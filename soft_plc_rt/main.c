@@ -25,8 +25,9 @@
 |***************************************************************************
 */
 
+#define DEBUG
 
-#define _linux_
+#define _windows_
 
 #ifdef _windows_
 
@@ -49,15 +50,28 @@
 
 typedef unsigned char BYTE;
 
+
+
 //=====================Point Instriction Registers
 static int PI_R;
 
 
 
 //=====================Accumulators registers
+#define MAX_OPERAND_SIZE 4
+
 
 static unsigned int ACC1_i,ACC2_i;
 static float ACC1_f,ACC2_f;
+
+static BYTE ACC1[4];
+static BYTE ACC2[4];
+
+//==================Operand registrer
+
+
+static BYTE OPERAND_R[MAX_OPERAND_SIZE];
+
 
 
 /*=====================FLAG REGISTER===================*/
@@ -184,7 +198,7 @@ static BYTE EXEC_PRG[SIZE_OF_EXEC_PRG_REGION] ;
 //
 
 
-int read_programm_image (char* img_file_name)
+int read_programm_image (char* img_file_name)  //load program from file image"ROM" to RAM
 {
     FILE *img_file;
     int c;
@@ -217,17 +231,21 @@ int read_programm_image (char* img_file_name)
 
 }
 //-------------------------------
-static void (*PUI)(int,BYTE);
+static void (*PUI)(int, BYTE*); //---- pointer to ALU instruction
 
 
 static void _load(int _operand_size, BYTE _operand)
 {
-    printf(" LOAD \n");
+    #ifdef DEBUG
+    printf(" LOAD \n\n");
 
+    #endif
     //basic actions
+    for (int i=0;i<4;i++ )
+        ACC2[i]=ACC1[i];
 
-    ACC1_i=_operand;
-    printf(" LOAD \n");
+    for (int i=0;i<_operand_size;i++ )
+        ACC1[i]=OPERAND_R[i];
 
     //flag
 
@@ -239,8 +257,9 @@ static void _transmit(int _operand_size, BYTE _operand)
 
 static void _nop(int _operand_size, BYTE _operand)
 {
-    printf(" NOP \n");
-
+    #ifdef DEBUG
+    printf(" NOP \n\n");
+    #endif
 }
 
 static void _add(int _operand_size,BYTE _operand)
@@ -249,23 +268,23 @@ static void _add(int _operand_size,BYTE _operand)
 }
 //-----------------------------------
 
-int  DECODE_OP_CODE_(BYTE op_code[2],int* _operand_size, void (*_pu_insturction) (int,BYTE) )
+int  DECODE_OP_CODE_(BYTE op_code[2],int* _operand_size)
 {
     if ((op_code[0]==0x7b) && (op_code[1]==0x7b)){
         *_operand_size=0;
-        _pu_insturction=_nop;
+        PUI=&_nop;
         return 1;
     }
 
     if ((op_code[0]==0x7d) && (op_code[1]==0x7d)){
         *_operand_size=0;
-        _pu_insturction=_nop;
+        PUI=&_nop;
         return 0;
     }
 
     if ((op_code[0]==0x30) && (op_code[1]==0x30)){
         *_operand_size=1;
-        _pu_insturction=_load;
+        PUI=&_load;
         return 1;
     }
 
@@ -275,9 +294,15 @@ int  DECODE_OP_CODE_(BYTE op_code[2],int* _operand_size, void (*_pu_insturction)
 
 void _DEBUG_OUT(void)
 {
-//    printf("++++++++++++++++++++++++++++++++++++++++++\n");
-    printf("ACC_=%d     FLAG=",ACC1_i);
-    for (int i=0;i<16;i++)
+
+    printf("ACC_1=");
+    for (int i=3;i>=0;i--)
+        printf("%d",ACC1[i]);
+    printf("    ACC_2=");
+    for (int i=3;i>=0;i--)
+        printf("%d",ACC2[i]);
+    printf("    FLAG_=");
+    for (int i=15;i>=0;i--)
         FLAG_R&(1<<i)?printf("%d",1):printf("%d",0);
     printf("\n");
 
@@ -297,7 +322,7 @@ int main(int argc, char* argv[])
     int EndOfPOU_flag=0;
     int count_of_tic=0;
     BYTE cur_op_code[2]={0x00,0x00};
-    BYTE operand=0;
+//    BYTE operand=0;
     int operand_size=0;
     int end_of_circle=1;
 
@@ -320,10 +345,9 @@ int main(int argc, char* argv[])
 
     //-----------------------
 
-
-
     read_programm_image(test_prog);
 
+    #ifdef DEBUG
     printf("\n__________________________________________\n");
     printf("programm dump:\n");
     addr=0;
@@ -338,7 +362,7 @@ int main(int argc, char* argv[])
        }
 
     printf("\n__________________________________________\n");
-
+    #endif
 
     //    execute POU
     count_of_tic=1;
@@ -348,40 +372,47 @@ int main(int argc, char* argv[])
         addr=0;
         PI_R=addr;
         end_of_circle=1;
+
+        #ifdef DEBUG
         printf("                      tic #%d\n",count_of_tic);
+        #endif
 
         while (end_of_circle)
         {
-
-            _DEBUG_OUT();
-
-            //--- get OP CODE
+            #ifdef DEBUG
+            _DEBUG_OUT(); // debug information
+            #endif
+            //--- GET OPATION CODE
             cur_op_code[0]=EXEC_PRG[PI_R];
             PI_R++;
             cur_op_code[1]=EXEC_PRG[PI_R];
 
-            end_of_circle=DECODE_OP_CODE_(cur_op_code, &operand_size,PUI);
-            printf("cmd-%x%x;operand_size-%d;",cur_op_code[0],cur_op_code[1], operand_size);
-
+            end_of_circle=DECODE_OP_CODE_(cur_op_code, &operand_size);
+            #ifdef DEBUG
+            printf("cmd=%x%x;  operand_size=%d;",cur_op_code[0],cur_op_code[1], operand_size);
+            #endif
 
             //---- GET OPERAND
-            if (operand_size>0){
+            if ((operand_size>0)&&(operand_size<=MAX_OPERAND_SIZE)){
                 for (i=1;i<=operand_size;++i)
                 {
                     PI_R+=i;
-                    operand=EXEC_PRG[PI_R];
-                    printf("operand-%x",operand);// debug msg
+                    OPERAND_R[i-1]=EXEC_PRG[PI_R];
+                    #ifdef DEBUG
+                    printf("  operand=%x",OPERAND_R[i-1]);// debug msg
+                    #endif
                 }
             }
+            #ifdef DEBUG
             else
-                printf("no operand"); // debug msg
+                 printf("  no operand"); // debug msg
             printf("\n");// debug msg
+            #endif
 
-            //--- execute operation
+            //--- EXECUTE OPERATION
+            PUI(operand_size,OPERAND_R);
 
-            PUI(operand_size,operand);
-            _DEBUG_OUT();
-
+            // goto next operation
             PI_R++;
         }
 
@@ -389,9 +420,7 @@ int main(int argc, char* argv[])
         count_of_tic--;
     }
 
-//    printf ("RLO - %d\n", READ_RLO ? 1 :0);
-//    printf ("RLO - %d\n", READ_RLO ? 1 :0);
-//    printf ("RLO - %d\n", READ_RLO ? 1 :0);
+
 
     return 0;
 
